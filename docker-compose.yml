@@ -1,0 +1,43 @@
+
+services:
+  db:
+    image: postgres:18
+    container_name: vetra-db
+    environment:
+      POSTGRES_DB: vetra
+      POSTGRES_USER: vetra_app
+      POSTGRES_PASSWORD: vetra123
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vetra_app -d vetra"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: .
+    container_name: vetra-backend
+    ports:
+      - "5000:5000"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: vetra
+      DB_USER: vetra_app
+      DB_PASSWORD: vetra123
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "python -m database.migrate && python app.py"
+
+  frontend:
+    build: ../Vetra-FrontEnd
+    container_name: vetra-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
